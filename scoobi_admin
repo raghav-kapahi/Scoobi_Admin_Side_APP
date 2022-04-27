@@ -1,0 +1,178 @@
+// @dart=2.9
+import 'dart:core';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ticketview/ticketview.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
+}
+
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final _firestore = FirebaseFirestore.instance;
+  bool showvalue = false;
+  @override
+  void datastream() async {
+    await for (var snapshot in _firestore.collection('formdata').snapshots()) {
+      for (var newdata in snapshot.docs) {
+        print(newdata.data());
+      }
+    }
+  }
+
+  Future<void> reject(String id) {
+    return _firestore.collection('formdata').doc(id).delete();
+  }
+
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: Scaffold(
+        backgroundColor: Color(0xffeecebc),
+        body: Column(
+          children: [
+            StreamBuilder<QuerySnapshot>(
+              stream: _firestore.collection('formdata').snapshots(),
+              builder: (context, snapshot) {
+                List<Widget> messagewidgets = [];
+                if (!snapshot.hasData) {
+                  return Center(
+                    child: CircularProgressIndicator(
+                      backgroundColor: Colors.deepOrange,
+                    ),
+                  );
+                }
+
+                final formes = snapshot.data.docs;
+                for (var message in formes) {
+                  var id = message.reference.id;
+                  final formdta = message.data() as Map;
+                  var owname = formdta['ownername'];
+                  var mobno = formdta['mobno'];
+                  var vehno = formdta['vehno'];
+                  var addr = formdta['addr'];
+                  //  String owname = formdta.toString();
+                  // final ownwidget = Text('OWNER NAME: $owname');
+                  // final mobwidget = Text('MOBILE NUMBER: $mobno');
+                  // final vehwidget = Text('VEHICLE NUMBER: $vehno');
+                  // final addrwidget = Text('ADDRESS: $addr');
+                  //final sizedbox = SizedBox(height: 3);
+                  //bool showvalue = false;
+
+                  final booking = Dismissible(
+                    key: UniqueKey(),
+                    direction: DismissDirection.horizontal,
+                    onDismissed: (_) {
+                      _firestore.collection('alteformdata').add({
+                        'addr': addr,
+                        'mobno': mobno,
+                        'ownername': owname,
+                        'vehno': vehno
+                      });
+                      reject(id);
+                    },
+                    child: TicketView(
+                      backgroundPadding:
+                          EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+                      backgroundColor: Color(0xffeecebc),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 12, horizontal: 0),
+                      drawArc: false,
+                      triangleAxis: Axis.vertical,
+                      borderRadius: 6,
+                      drawDivider: true,
+                      trianglePos: .5,
+                      child: Container(
+                        padding: EdgeInsets.only(top: 30),
+                        decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.yellow,
+                                offset: const Offset(
+                                  5.0,
+                                  5.0,
+                                ),
+                                blurRadius: 5.0,
+                                spreadRadius: 1.0,
+                              ),
+                            ],
+                            borderRadius: BorderRadius.only(
+                                topRight: Radius.circular(20)),
+                            color: Colors.white),
+                        child: Column(
+                          children: [
+                            Text(
+                              'OWNER NAME: $owname',
+                              style: TextStyle(
+                                fontSize: 15.0,
+                                fontFamily: 'Koho',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'MOBILE NUMBER: $mobno',
+                              style: TextStyle(
+                                fontSize: 15.0,
+                                fontFamily: 'Koho',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'VEHICLE NUMBER: $vehno',
+                              style: TextStyle(
+                                fontSize: 15.0,
+                                fontFamily: 'Koho',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'ADDRESS: $addr',
+                              style: TextStyle(
+                                fontSize: 15.0,
+                                fontFamily: 'Koho',
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 15),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+
+                  messagewidgets.add(booking);
+
+
+                }
+                return Expanded(
+                  child: ListView(
+                    padding:
+                        const EdgeInsets.only(top: 25, left: 15, right: 15),
+                    //scrollDirection: Axis.vertical,
+                    children: messagewidgets,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
